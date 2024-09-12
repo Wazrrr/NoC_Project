@@ -84,7 +84,7 @@ def plot_hops_for_files(file_paths):
     plt.title("Hops-Throughput Curve for Different Topologies")
     plt.grid(True)
     plt.legend()
-    plt.savefig("hops.png")
+    plt.savefig("global_results/hops.png")
     plt.show()
 
 
@@ -123,7 +123,7 @@ def plot_latency_for_files(file_paths):
     plt.title("Latency-Throughput Curve for Different Topologies")
     plt.grid(True)
     plt.legend()
-    plt.savefig("latency.png")
+    plt.savefig("global_results/latency.png")
     plt.show()
 
 
@@ -163,7 +163,7 @@ def plot_receptionrate_for_files(file_paths):
     plt.title("Reception_Rates-Throughput Curve for Different Topologies")
     plt.grid(True)
     plt.legend()
-    plt.savefig("reception.png")
+    plt.savefig("global_results/reception.png")
     plt.show()
 
 

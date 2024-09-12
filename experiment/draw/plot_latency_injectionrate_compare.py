@@ -60,29 +60,41 @@ def plot_latency_throughput_for_files(file_paths):
             rejction_rates,
         ) = parse_file(file_path)
 
-        reception_rates = [i / 64 / 10000 for i in packet_received]
+        temp_injection_rates = injection_rates
+        # find the first element in average_latency which is larger than 100 and delete all after elements
+        for i in range(len(average_latency)):
+            if average_latency[i] > 200:
+                average_latency = average_latency[:i]
+                temp_injection_rates = injection_rates[:i]
+                break
 
-        color = colors[title]
+        color = colors.get(
+            title, "#000000"
+        )  # Default to black if the title is not found
+
+        # Plot the data with the specified color
         plt.plot(
-            injection_rates,
-            reception_rates,
+            temp_injection_rates,
+            average_latency,
             marker="o",
             label=title,
             color=color,
             linewidth=2.5,
         )
+
+        # plt.plot(temp_injection_rates, average_latency, marker='o', label=title)
         # plt.plot(injection_rates, rejction_rates, marker='o', label=title)
         # plt.plot(injection_rates, packet_received, marker="o", label=title)
 
     plt.xlabel("Injection Rates")
 
-    plt.ylabel("Reception Rates")
+    plt.ylabel("Average Packet Latency")
     # plt.ylabel('Rejection Rates')
     # plt.ylabel("Packet Received")
 
     # i want that the end of the title is the traffic pattern
     plt.title(
-        "Receptionrate-Injectionrate Curve for four different routing algorithms in "
+        "Latency-Injectionrate Curve for four different routing algorithms in "
         + traffic
         + " traffic pattern"
     )
@@ -93,7 +105,7 @@ def plot_latency_throughput_for_files(file_paths):
     plt.grid(True)
     plt.legend()
     # plt.savefig('latency_injectionrates_curve.png')
-    plt.savefig("plot_receptionrate_injectionrate_compare_" + traffic + ".png")
+    plt.savefig("global_results/plot_latency_injectionrate_compare_" + traffic + ".png")
     # plt.savefig("packetsreceived_injectionrates_curve.png")
     plt.show()
 
@@ -111,10 +123,10 @@ list = [
 # i want create a list of file paths for each traffic pattern
 for traffic in list:
     file_paths = [
-        "result/Lab4/4_4_4_torus/algorithm0/" + traffic + ".txt",
-        "result/Lab4/4_4_4_torus/dor/" + traffic + ".txt",
-        "result/Lab4/4_4_4_torus/goal/" + traffic + ".txt",
-        "result/Lab4/4_4_4_torus/min_ad/" + traffic + ".txt",
+        "../result/Lab4/4_4_4_torus/algorithm0/" + traffic + ".txt",
+        "../result/Lab4/4_4_4_torus/dor/" + traffic + ".txt",
+        "../result/Lab4/4_4_4_torus/goal/" + traffic + ".txt",
+        "../result/Lab4/4_4_4_torus/min_ad/" + traffic + ".txt",
         # Add more file paths as needed
     ]
     # Plot the latency-throughput curves

@@ -147,7 +147,7 @@ plt.gca().set_axisbelow(True)  # Ensure gridlines are behind the bars
 plt.tight_layout()
 
 # Save the plot as a PNG file
-plt.savefig("max_reception_rate_comparison.png")
+plt.savefig("global_results/max_reception_rate_comparison.png")
 
 # Show the plot
 plt.show()
