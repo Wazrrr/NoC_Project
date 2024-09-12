@@ -67,8 +67,10 @@ class OutputUnit : public Consumer
     void decrement_credit(int out_vc);
     void increment_credit(int out_vc);
     bool has_credit(int out_vc);
-    bool has_free_vc(int vnet);
-    int select_free_vc(int vnet);
+    bool has_free_vc(int vnet, bool is_ring, bool is_ring_checkpoint, bool is_torus, std::vector<bool> is_torus_dims_checkpoint, bool is_minimal_torus, RoutingAlgorithm routing_algorithm);
+    int count_free_vc(int vnet, bool is_ring, bool is_ring_checkpoint, bool is_torus, std::vector<bool> is_torus_dims_checkpoint, bool is_minimal_torus, RoutingAlgorithm routing_algorithm);
+    int select_free_vc(int vnet, bool is_ring, bool is_ring_checkpoint, bool is_torus, std::vector<bool> is_torus_dims_checkpoint, bool is_minimal_torus, RoutingAlgorithm routing_algorithm);
+    int get_dim_of_direction();
 
     inline PortDirection get_direction() { return m_direction; }
 

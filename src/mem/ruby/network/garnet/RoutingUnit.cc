@@ -27,13 +27,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
+#include <random>
 #include "mem/ruby/network/garnet/RoutingUnit.hh"
 
 #include "base/cast.hh"
 #include "base/compiler.hh"
 #include "debug/RubyNetwork.hh"
 #include "mem/ruby/network/garnet/InputUnit.hh"
+#include "mem/ruby/network/garnet/OutputUnit.hh"
 #include "mem/ruby/network/garnet/Router.hh"
 #include "mem/ruby/slicc_interface/Message.hh"
 
@@ -191,8 +192,14 @@ RoutingUnit::outportCompute(RouteInfo route, int inport,
         case XY_:     outport =
             outportComputeXY(route, inport, inport_dirn); break;
         // any custom algorithm
-        case CUSTOM_: outport =
-            outportComputeCustom(route, inport, inport_dirn); break;
+        case Ring_: outport =
+            outportComputeRing(route, inport, inport_dirn); break;
+        case Dor_: outport =
+            outportComputeTorus_Shortest_Path(route, inport, inport_dirn); break;
+        case Goal_: outport =
+            outportComputeTorus(route, inport, inport_dirn); break;
+        case Min_AD_: outport =
+            outportComputeMINAD(route, inport, inport_dirn); break;
         default: outport =
             lookupRoutingTable(route.vnet, route.net_dest); break;
     }
@@ -262,12 +269,276 @@ RoutingUnit::outportComputeXY(RouteInfo route,
 
 // Template for implementing custom routing algorithm
 // using port directions. (Example adaptive)
+RouteInfo
+RoutingUnit::create_routeinfo(RouteInfo original_routeinfo, int new_outport)
+{
+    RouteInfo new_routeinfo = original_routeinfo;
+    PortDirection outport_direction = m_outports_idx2dirn[new_outport];
+
+    std::string dims_str = m_router->get_net_ptr()->getTorusDims();
+    std::vector<int> dimensions;
+    std::stringstream ss(dims_str);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        int dim = std::stoi(token);
+        assert(dim > 0);
+        dimensions.push_back(dim);
+    }
+    int my_id = m_router->get_id();
+    std::vector<int> my_coords = index_to_coords(my_id, dimensions);
+    //update the is_torus_dims_checkpoint
+    for (int i = 0; i < my_coords.size(); i++) {
+        if (my_coords[i] == 0 && outport_direction == "dim"+std::to_string(i)+"_neg") {
+            new_routeinfo.is_torus_dims_checkpoint[i] = true;
+        }
+        else if (my_coords[i] == dimensions[i]-1 && outport_direction == "dim"+std::to_string(i)+"_pos") {
+            new_routeinfo.is_torus_dims_checkpoint[i] = true;
+        }
+    }
+    return new_routeinfo;
+}
+
 int
-RoutingUnit::outportComputeCustom(RouteInfo route,
+RoutingUnit::outportComputeRing(RouteInfo route,
                                  int inport,
                                  PortDirection inport_dirn)
 {
-    panic("%s placeholder executed", __FUNCTION__);
+    PortDirection outport_dirn = "Unknown";
+
+    int num_routers = m_router->get_net_ptr()->getNumRouters();
+    int my_id = m_router->get_id();
+    int dest_id = route.dest_router;
+    int hops = (dest_id - my_id + num_routers) % num_routers;
+
+    if (hops >= num_routers/2) {
+        outport_dirn = "West";
+    }
+    else {
+        outport_dirn = "East";
+        // panic("%s placeholder executed", __FUNCTION__);
+    }
+
+    return m_outports_dirn2idx[outport_dirn];
+}
+
+//function: index to coordinates
+std::vector<int>
+RoutingUnit::index_to_coords(int index, const std::vector<int>& dims) {
+    std::vector<int> coords(dims.size());  // Initialize the coords vector with the same size as dims
+    for (int i = 0; i < dims.size(); i++) {
+        coords[i] = index % dims[i];  // Calculate the coordinate for dimension i
+        index /= dims[i];  // Update the index for the next dimension
+    }
+    return coords;
+}
+
+int
+RoutingUnit::outportComputeTorus_Shortest_Path(RouteInfo route,
+                                 int inport,
+                                 PortDirection inport_dirn)
+{
+    PortDirection outport_dirn = "Unknown";
+
+    std::string dims_str = m_router->get_net_ptr()->getTorusDims();
+    std::vector<int> dimensions;
+    std::stringstream ss(dims_str);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        int dim = std::stoi(token);
+        assert(dim > 0);
+        dimensions.push_back(dim);
+    }
+
+
+    int num_dims = dimensions.size();
+
+    // convert index to coordinates
+    int my_id = m_router->get_id();
+    std::vector<int> my_coords = index_to_coords(my_id, dimensions);
+
+    int dest_id = route.dest_router;
+    std::vector<int> dest_coords = index_to_coords(dest_id, dimensions);
+    int pos_hops = 0;
+    // go each dimensions sequentially, just go pos direction
+    for (int i = 0; i < num_dims; ++i) {
+        pos_hops = (dest_coords[i] - my_coords[i] + dimensions[i]) % dimensions[i];
+        if (pos_hops == 0) {
+            continue;
+        }
+        else if (pos_hops < dimensions[i]/2) {
+            outport_dirn = "dim" + std::to_string(i) + "_pos";
+        }
+        else {
+            outport_dirn = "dim" + std::to_string(i) + "_neg";
+        }
+    }
+
+    return m_outports_dirn2idx[outport_dirn];
+}
+
+int
+RoutingUnit::outportComputeTorus(RouteInfo route,
+                                 int inport,
+                                 PortDirection inport_dirn)
+{
+    PortDirection outport_dirn = "Unknown";
+
+    std::string dims_str = m_router->get_net_ptr()->getTorusDims();
+    std::vector<int> dimensions;
+    std::stringstream ss(dims_str);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        int dim = std::stoi(token);
+        assert(dim > 0);
+        dimensions.push_back(dim);
+    }
+
+    int num_dims = dimensions.size();
+
+    // convert index to coordinates
+    int my_id = m_router->get_id();
+    std::vector<int> my_coords = index_to_coords(my_id, dimensions);
+
+    int dest_id = route.dest_router;
+    std::vector<int> dest_coords = index_to_coords(dest_id, dimensions);
+
+    //Choose the directions when initialzing
+    if (route.directions.empty()) {
+        std::vector<double> pos_probability(num_dims);
+        for (int i = 0; i < num_dims; i++) {
+            pos_probability[i] = 1.0 - static_cast<double>((dest_coords[i] - my_coords[i] + dimensions[i]) % dimensions[i]) / static_cast<double>(dimensions[i]);
+        }
+        // Create a random number generator
+        std::random_device rd;  // Obtain a random number from hardware
+        std::mt19937 gen(rd()); // Seed the generator
+        std::uniform_real_distribution<> dis(0.0, 1.0);
+
+        route.directions.resize(num_dims); // Resize to hold num_dims elements
+        for (int i = 0; i < num_dims; ++i) {
+            if (pos_probability[i] == 1) {route.directions[i]=0; continue;}
+            double random_number = dis(gen);
+            route.directions[i] = (random_number < pos_probability[i]) ? 1 : -1;
+
+            // if (pos_probability[i] >0.5) route.directions[i] = 1;
+            // else route.directions[i] = -1;// for testing
+
+            if (pos_probability[i] >0.5 && route.directions[i] == 1) {route.is_minimal_torus = true;}
+            else if (pos_probability[i] <0.5 && route.directions[i] == -1) {route.is_minimal_torus = true;}
+
+        }
+    }
+
+    std::vector<unsigned> check_outports_idxs;
+    for (int i = 0; i < num_dims; ++i) {
+        if (dest_coords[i] == my_coords[i]) {
+            route.directions[i] = 0;
+            continue;
+        }
+        PortDirection temp_outport;
+        if (route.directions[i] == 1) {
+            temp_outport = "dim" + std::to_string(i) + "_pos";
+        } else if (route.directions[i] == -1) {
+            temp_outport = "dim" + std::to_string(i) + "_neg";
+        }
+        check_outports_idxs.push_back(m_outports_dirn2idx[temp_outport]);
+    }
+
+    // check these outports, count their vcs and pick the one with minimum occupation in vc.
+    int max_vc_free = -1;
+    int outport = check_outports_idxs[0];
+    RoutingAlgorithm routing_algorithm =
+        (RoutingAlgorithm) m_router->get_net_ptr()->getRoutingAlgorithm();
+    for (int i = 0; i < check_outports_idxs.size(); ++i) {
+        auto output_unit = m_router->getOutputUnit(check_outports_idxs[i]);
+        int vc_free = output_unit->count_free_vc(route.vnet,false,false,true,route.is_torus_dims_checkpoint, route.is_minimal_torus, routing_algorithm);
+        if (vc_free > max_vc_free) {
+            max_vc_free = vc_free;
+            outport = check_outports_idxs[i];
+        }
+    }
+
+    return outport;
+}
+
+int
+RoutingUnit::outportComputeMINAD(RouteInfo route,
+                                 int inport,
+                                 PortDirection inport_dirn)
+{
+    PortDirection outport_dirn = "Unknown";
+
+    std::string dims_str = m_router->get_net_ptr()->getTorusDims();
+    std::vector<int> dimensions;
+    std::stringstream ss(dims_str);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        int dim = std::stoi(token);
+        assert(dim > 0);
+        dimensions.push_back(dim);
+    }
+
+    int num_dims = dimensions.size();
+
+    // convert index to coordinates
+    int my_id = m_router->get_id();
+    std::vector<int> my_coords = index_to_coords(my_id, dimensions);
+
+    int dest_id = route.dest_router;
+    std::vector<int> dest_coords = index_to_coords(dest_id, dimensions);
+
+    //Choose the directions when initialzing
+    if (route.directions.empty()) {
+        std::vector<double> pos_probability(num_dims);
+        for (int i = 0; i < num_dims; i++) {
+            pos_probability[i] = 1.0 - static_cast<double>((dest_coords[i] - my_coords[i] + dimensions[i]) % dimensions[i]) / static_cast<double>(dimensions[i]);
+        }
+
+        route.directions.resize(num_dims); // Resize to hold num_dims elements
+        for (int i = 0; i < num_dims; ++i) {
+            if (pos_probability[i] == 1) {route.directions[i]=0; continue;}
+
+            if (pos_probability[i] > 0.5) route.directions[i] = 1;
+            else route.directions[i] = -1;// min ad
+
+            route.is_minimal_torus = true;
+
+        }
+    }
+
+    std::vector<unsigned> check_outports_idxs;
+    for (int i = 0; i < num_dims; ++i) {
+        if (dest_coords[i] == my_coords[i]) {
+            route.directions[i] = 0;
+            continue;
+        }
+        PortDirection temp_outport;
+        if (route.directions[i] == 1) {
+            temp_outport = "dim" + std::to_string(i) + "_pos";
+        } else if (route.directions[i] == -1) {
+            temp_outport = "dim" + std::to_string(i) + "_neg";
+        }
+        check_outports_idxs.push_back(m_outports_dirn2idx[temp_outport]);
+    }
+
+    // check these outports, count their vcs and pick the one with minimum occupation in vc.
+    int max_vc_free = -1;
+    int outport = check_outports_idxs[0];
+    RoutingAlgorithm routing_algorithm =
+        (RoutingAlgorithm) m_router->get_net_ptr()->getRoutingAlgorithm();
+    for (int i = 0; i < check_outports_idxs.size(); ++i) {
+        auto output_unit = m_router->getOutputUnit(check_outports_idxs[i]);
+        int vc_free = output_unit->count_free_vc(route.vnet,false,false,true,route.is_torus_dims_checkpoint, route.is_minimal_torus, routing_algorithm);
+        if (vc_free > max_vc_free) {
+            max_vc_free = vc_free;
+            outport = check_outports_idxs[i];
+        }
+    }
+
+    return outport;
 }
 
 } // namespace garnet

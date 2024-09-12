@@ -50,14 +50,14 @@ enum VC_state_type {IDLE_, VC_AB_, ACTIVE_, NUM_VC_STATE_TYPE_};
 enum VNET_type {CTRL_VNET_, DATA_VNET_, NULL_VNET_, NUM_VNET_TYPE_};
 enum flit_stage {I_, VA_, SA_, ST_, LT_, NUM_FLIT_STAGE_};
 enum link_type { EXT_IN_, EXT_OUT_, INT_, NUM_LINK_TYPES_ };
-enum RoutingAlgorithm { TABLE_ = 0, XY_ = 1, CUSTOM_ = 2,
+enum RoutingAlgorithm { TABLE_ = 0, XY_ = 1, Ring_ = 2, Dor_ = 3, Goal_ = 4, Min_AD_ = 5,
                         NUM_ROUTING_ALGORITHM_};
 
 struct RouteInfo
 {
     RouteInfo()
         : vnet(0), src_ni(0), src_router(0), dest_ni(0), dest_router(0),
-          hops_traversed(0)
+          hops_traversed(0), is_torus(false), is_minimal_torus(false), is_torus_dims_checkpoint(3, false)
     {}
 
     // destination format for table-based routing
@@ -70,6 +70,10 @@ struct RouteInfo
     int dest_ni;
     int dest_router;
     int hops_traversed;
+    std::vector<int> directions;
+    bool is_torus;
+    bool is_minimal_torus;
+    std::vector<bool> is_torus_dims_checkpoint;
 };
 
 #define INFINITE_ 10000

@@ -97,6 +97,83 @@ InputUnit::wakeup()
             int outport = m_router->route_compute(t_flit->get_route(),
                 m_id, m_direction);
 
+            int my_id = m_router->get_id();
+            std::vector<int> my_coords;
+            PortDirection outport_dirn = m_router->getOutportDirection(outport);
+            RoutingAlgorithm routing_algorithm =
+                (RoutingAlgorithm) m_router->get_net_ptr()->getRoutingAlgorithm();
+
+            switch (routing_algorithm) {
+                case Ring_:
+                    t_flit->is_ring = true;
+                    if (m_router->get_id()==0 && outport_dirn == "West") t_flit->is_ring_checkpoint = true;
+                    if (m_router->get_id()==1 && outport_dirn == "East") t_flit->is_ring_checkpoint = true;
+                    break;
+                case Dor_:{
+                    t_flit->set_is_torus(true);
+
+                    std::string dims_str = m_router->get_net_ptr()->getTorusDims();
+                    std::vector<int> dimensions;
+                    std::stringstream ss(dims_str);
+                    std::string token;
+
+                    while (std::getline(ss, token, ',')) {
+                        int dim = std::stoi(token);
+                        assert(dim > 0);
+                        dimensions.push_back(dim);
+                    }
+                    my_coords = index_to_coords(my_id, dimensions);
+
+                    for (int i = 0; i < my_coords.size(); i++) {
+                        if (my_coords[i] == 0 && outport_dirn == "dim"+std::to_string(i)+"_neg") {
+                            t_flit->set_is_torus_dims_checkpoint(i, true);
+                            break;
+                        }
+                        else if (my_coords[i] == dimensions[i]-1 && outport_dirn == "dim"+std::to_string(i)+"_pos") {
+                            t_flit->set_is_torus_dims_checkpoint(i, true);
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case Goal_:{
+                    t_flit->set_is_torus(true);
+
+                    break;
+                }
+                case Min_AD_:{
+                    // t_flit->set_is_torus(true);
+
+                    t_flit->set_is_torus(true);
+
+                    std::string dims_str = m_router->get_net_ptr()->getTorusDims();
+                    std::vector<int> dimensions;
+                    std::stringstream ss(dims_str);
+                    std::string token;
+
+                    while (std::getline(ss, token, ',')) {
+                        int dim = std::stoi(token);
+                        assert(dim > 0);
+                        dimensions.push_back(dim);
+                    }
+                    my_coords = index_to_coords(my_id, dimensions);
+                    if (t_flit->is_is_torus_dims_checkpoint_emtpy())
+                        t_flit->init_is_torus_dims_checkpoint(dimensions.size());
+                    for (int i = 0; i < my_coords.size(); i++) {
+                        if (my_coords[i] == 0 && outport_dirn == "dim"+std::to_string(i)+"_neg") {
+                            t_flit->set_is_torus_dims_checkpoint(i, true);
+                            break;
+                        }
+                        else if (my_coords[i] == dimensions[i]-1 && outport_dirn == "dim"+std::to_string(i)+"_pos") {
+                            t_flit->set_is_torus_dims_checkpoint(i, true);
+                            break;
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
             // Update output port in VC
             // All flits in this packet will use this output port
             // The output port field in the flit is updated after it wins SA

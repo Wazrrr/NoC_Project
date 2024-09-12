@@ -63,8 +63,8 @@ class SwitchAllocator : public Consumer
     void print(std::ostream& out) const {};
     void arbitrate_inports();
     void arbitrate_outports();
-    bool send_allowed(int inport, int invc, int outport, int outvc);
-    int vc_allocate(int outport, int inport, int invc);
+    bool send_allowed(int inport, int invc, int outport, int outvc, bool is_ring, bool is_ring_checkpoint, bool is_torus, std::vector<bool> is_torus_dims_checkpoint, bool is_minimal_torus, RoutingAlgorithm routing_algorithm);
+    int vc_allocate(int outport, int inport, int invc, bool is_ring, bool is_ring_checkpoint, bool is_torus, std::vector<bool> is_torus_dims_checkpoint, bool is_minimal_torus, RoutingAlgorithm routing_algorithm);
 
     inline double
     get_input_arbiter_activity()

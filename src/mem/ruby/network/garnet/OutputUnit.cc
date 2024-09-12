@@ -92,29 +92,252 @@ OutputUnit::has_credit(int out_vc)
     return outVcState[out_vc].has_credit();
 }
 
+int
+OutputUnit::get_dim_of_direction()
+{
+    std::string temp_direction = m_direction;
+
+    // std::cout<<"innnnnnnnnnnnnnnnnn"<<std::endl;
+    char fourthChar = temp_direction[3];
+    // std::cout << "Fourth character: " << fourthChar << std::endl;
+    int num = fourthChar - '0';
+    // std::cout << "The 4th character as an integer is: " << num << std::endl;
+
+    if (m_direction == "Local") {
+        num = -1;
+    }
+
+    return num;
+}
 
 // Check if the output port (i.e., input port at next router) has free VCs.
 bool
-OutputUnit::has_free_vc(int vnet)
+OutputUnit::has_free_vc(int vnet, bool is_ring, bool is_ring_checkpoint, bool is_torus, std::vector<bool> is_torus_dims_checkpoint, bool is_minimal_torus, RoutingAlgorithm routing_algorithm)
 {
     int vc_base = vnet*m_vc_per_vnet;
-    for (int vc = vc_base; vc < vc_base + m_vc_per_vnet; vc++) {
-        if (is_vc_idle(vc, curTick()))
-            return true;
+    int found = get_dim_of_direction();
+    if (is_ring) {
+        if (is_ring_checkpoint) {
+            for (int vc = vc_base; vc < vc_base + m_vc_per_vnet/2; vc++) {
+                if (is_vc_idle(vc, curTick()))
+                    return true;
+            }
+        }
+        else {
+            for (int vc = vc_base + m_vc_per_vnet/2; vc < vc_base + m_vc_per_vnet; vc++) {
+                if (is_vc_idle(vc, curTick()))
+                    return true;
+            }
+        }
     }
+    else if (is_torus) {
+        if (found < 0 ){
+            for (int vc = vc_base; vc < vc_base + m_vc_per_vnet; vc++) {
+                if (is_vc_idle(vc, curTick()))
+                    return true;
+            }
+        }
+        if (routing_algorithm == Goal_ || routing_algorithm == Min_AD_) {
+            for (int vc = vc_base; vc < vc_base + m_vc_per_vnet/3; vc++) {
+                    if (is_vc_idle(vc, curTick()))
+                        return true;
+            }
 
+            if (is_torus_dims_checkpoint[found]) {
+                for (int vc = vc_base + m_vc_per_vnet/3; vc < vc_base + m_vc_per_vnet*2/3; vc++) {
+                    if (is_vc_idle(vc, curTick()))
+                        return true;
+                }
+            }
+            else {
+                for (int vc = vc_base + m_vc_per_vnet*2/3; vc < vc_base + m_vc_per_vnet; vc++) {
+                    if (is_vc_idle(vc, curTick()))
+                        return true;
+                }
+            }
+        }
+
+
+        if (routing_algorithm == Dor_) {
+            if (is_torus_dims_checkpoint[found]) {
+                for (int vc = vc_base; vc < vc_base + m_vc_per_vnet/2; vc++) {
+                    if (is_vc_idle(vc, curTick()))
+                        return true;
+                }
+            }
+            else {
+                for (int vc = vc_base + m_vc_per_vnet/2; vc < vc_base + m_vc_per_vnet; vc++) {
+                    if (is_vc_idle(vc, curTick()))
+                        return true;
+                }
+            }
+        }
+    }
+    else {
+        for (int vc = vc_base; vc < vc_base + m_vc_per_vnet; vc++) {
+            if (is_vc_idle(vc, curTick()))
+                return true;
+        }
+    }
     return false;
+}
+
+int
+OutputUnit::count_free_vc(int vnet, bool is_ring, bool is_ring_checkpoint, bool is_torus, std::vector<bool> is_torus_dims_checkpoint, bool is_minimal_torus, RoutingAlgorithm routing_algorithm)
+{
+    int vc_base = vnet*m_vc_per_vnet;
+    int count = 0;
+    int found = get_dim_of_direction();
+    if (is_ring) {
+        if (is_ring_checkpoint) {
+            for (int vc = vc_base; vc < vc_base + m_vc_per_vnet/2; vc++) {
+                if (is_vc_idle(vc, curTick()))
+                    count += 1;
+            }
+        }
+        else {
+            for (int vc = vc_base + m_vc_per_vnet/2; vc < vc_base + m_vc_per_vnet; vc++) {
+                if (is_vc_idle(vc, curTick()))
+                    count += 1;
+            }
+        }
+    }
+    else if (is_torus) {
+        if (found < 0 ){
+            for (int vc = vc_base; vc < vc_base + m_vc_per_vnet; vc++) {
+                if (is_vc_idle(vc, curTick()))
+                    count += 1;
+            }
+        }
+        if (routing_algorithm == Goal_ || routing_algorithm == Min_AD_) {
+            for (int vc = vc_base; vc < vc_base + m_vc_per_vnet/3; vc++) {
+                    if (is_vc_idle(vc, curTick()))
+                        count += 1;
+                }
+
+                if (is_torus_dims_checkpoint[found]) {
+                    for (int vc = vc_base + m_vc_per_vnet/3; vc < vc_base + m_vc_per_vnet*2/3; vc++) {
+                        if (is_vc_idle(vc, curTick()))
+                            count += 1;
+                    }
+                }
+                else {
+                    for (int vc = vc_base + m_vc_per_vnet*2/3; vc < vc_base + m_vc_per_vnet; vc++) {
+                        if (is_vc_idle(vc, curTick()))
+                            count += 1;
+                    }
+                }
+        }
+
+        if (routing_algorithm == Dor_) {
+        if (is_torus_dims_checkpoint[found]) {
+            for (int vc = vc_base; vc < vc_base + m_vc_per_vnet/2; vc++) {
+                if (is_vc_idle(vc, curTick()))
+                    count += 1;
+            }
+        }
+        else {
+            for (int vc = vc_base + m_vc_per_vnet/2; vc < vc_base + m_vc_per_vnet; vc++) {
+                if (is_vc_idle(vc, curTick()))
+                    count += 1;
+            }
+        }
+        }
+    }
+    else {
+        for (int vc = vc_base; vc < vc_base + m_vc_per_vnet; vc++) {
+            if (is_vc_idle(vc, curTick()))
+                count += 1;
+        }
+    }
+    return count;
 }
 
 // Assign a free output VC to the winner of Switch Allocation
 int
-OutputUnit::select_free_vc(int vnet)
+OutputUnit::select_free_vc(int vnet, bool is_ring, bool is_ring_checkpoint, bool is_torus, std::vector<bool> is_torus_dims_checkpoint, bool is_minimal_torus, RoutingAlgorithm routing_algorithm)
 {
     int vc_base = vnet*m_vc_per_vnet;
-    for (int vc = vc_base; vc < vc_base + m_vc_per_vnet; vc++) {
-        if (is_vc_idle(vc, curTick())) {
-            outVcState[vc].setState(ACTIVE_, curTick());
-            return vc;
+    int found = get_dim_of_direction();
+    if (is_ring) {
+        if (is_ring_checkpoint) {
+            for (int vc = vc_base; vc < vc_base + m_vc_per_vnet/2; vc++) {
+                if (is_vc_idle(vc, curTick())) {
+                    outVcState[vc].setState(ACTIVE_, curTick());
+                    return vc;
+                }
+            }
+        }
+        else {
+            for (int vc = vc_base + m_vc_per_vnet/2; vc < vc_base + m_vc_per_vnet; vc++) {
+                if (is_vc_idle(vc, curTick())) {
+                    outVcState[vc].setState(ACTIVE_, curTick());
+                    return vc;
+                }
+            }
+        }
+    }
+    else if (is_torus) {
+        if (found < 0 ){
+            for (int vc = vc_base; vc < vc_base + m_vc_per_vnet; vc++) {
+                if (is_vc_idle(vc, curTick())) {
+                    outVcState[vc].setState(ACTIVE_, curTick());
+                    return vc;
+                }
+            }
+        }
+        if (routing_algorithm == Goal_ || routing_algorithm == Min_AD_) {
+            for (int vc = vc_base; vc < vc_base + m_vc_per_vnet/3; vc++) {
+                if (is_vc_idle(vc, curTick())) {
+                    outVcState[vc].setState(ACTIVE_, curTick());
+                    return vc;
+                }
+            }
+
+            if (is_torus_dims_checkpoint[found]) {
+                for (int vc = vc_base + m_vc_per_vnet/3; vc < vc_base + m_vc_per_vnet*2/3; vc++) {
+                    if (is_vc_idle(vc, curTick())) {
+                        outVcState[vc].setState(ACTIVE_, curTick());
+                        return vc;
+                    }
+                }
+            }
+            else {
+                for (int vc = vc_base + m_vc_per_vnet*2/3; vc < vc_base + m_vc_per_vnet; vc++) {
+                    if (is_vc_idle(vc, curTick())) {
+                        outVcState[vc].setState(ACTIVE_, curTick());
+                        return vc;
+                    }
+                }
+            }
+        }
+
+        if (routing_algorithm == Dor_) {
+            if (is_torus_dims_checkpoint[found]) {
+                for (int vc = vc_base; vc < vc_base + m_vc_per_vnet/2; vc++) {
+                    if (is_vc_idle(vc, curTick())) {
+                        outVcState[vc].setState(ACTIVE_, curTick());
+                        return vc;
+                    }
+                }
+            }
+            else {
+                for (int vc = vc_base + m_vc_per_vnet/2; vc < vc_base + m_vc_per_vnet; vc++) {
+                    if (is_vc_idle(vc, curTick())) {
+                        outVcState[vc].setState(ACTIVE_, curTick());
+                        return vc;
+                    }
+                }
+            }
+        }
+
+    }
+    else {
+        for (int vc = vc_base; vc < vc_base + m_vc_per_vnet; vc++) {
+            if (is_vc_idle(vc, curTick())) {
+                outVcState[vc].setState(ACTIVE_, curTick());
+                return vc;
+            }
         }
     }
 

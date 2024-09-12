@@ -157,6 +157,27 @@ class InputUnit : public Consumer
 
     void resetStats();
 
+    std::vector<int> index_to_coords(int index, const std::vector<int>& dims) {
+        std::vector<int> coords(dims.size());  // Initialize the coords vector with the same size as dims
+        for (int i = 0; i < dims.size(); i++) {
+            coords[i] = index % dims[i];  // Calculate the coordinate for dimension i
+            index /= dims[i];  // Update the index for the next dimension
+        }
+        return coords;
+    }
+
+    int coords_to_index(std::vector<int> coords, const std::vector<int>& dims) {
+        int idx = 0;
+        int multiplier = 1;
+        for (int i = 0; i < dims.size(); i++) {
+            idx += coords[i] * multiplier;
+            multiplier *= dims[i];
+        }
+        return idx;
+    }
+
+
+
   private:
     Router *m_router;
     int m_id;

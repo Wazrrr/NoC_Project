@@ -48,6 +48,12 @@ def define_options(parser):
         help="the number of rows in the mesh topology",
     )
     parser.add_argument(
+        "--dims",
+        type=str,
+        default="4,4,4",
+        help="the dimensions of the n-d torus topology",
+    )
+    parser.add_argument(
         "--network",
         default="simple",
         choices=["simple", "garnet"],
@@ -118,6 +124,12 @@ def define_options(parser):
         help="""SimpleNetwork links uses a separate physical
             channel for each virtual network""",
     )
+    parser.add_argument(
+        "--wormhole",
+        action="store_true",
+        default=False,
+        help="""Use wormhole flow control instead of store and forward""",
+    )
 
 
 def create_network(options, ruby):
@@ -165,6 +177,7 @@ def init_network(options, network, InterfaceClass):
 
     if options.network == "garnet":
         network.num_rows = options.mesh_rows
+        network.dims = options.dims
         network.vcs_per_vnet = options.vcs_per_vnet
         network.ni_flit_size = options.link_width_bits / 8
         network.routing_algorithm = options.routing_algorithm

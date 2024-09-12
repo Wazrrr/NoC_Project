@@ -51,6 +51,8 @@ enum TrafficType {BIT_COMPLEMENT_ = 0,
                   TORNADO_ = 5,
                   TRANSPOSE_ = 6,
                   UNIFORM_RANDOM_ = 7,
+                  TORUS_TRANSPOSE_ = 8,
+                  TORUS_TORNADO_ = 9,
                   NUM_TRAFFIC_PATTERNS_};
 
 class Packet;
@@ -73,6 +75,25 @@ class GarnetSyntheticTraffic : public ClockedObject
      * debugging).
      */
     void printAddr(Addr a);
+    //function: index to coordinates
+    std::vector<int> index_to_coords(int index, const std::vector<int>& dims) {
+        std::vector<int> coords(dims.size());  // Initialize the coords vector with the same size as dims
+        for (int i = 0; i < dims.size(); i++) {
+            coords[i] = index % dims[i];  // Calculate the coordinate for dimension i
+            index /= dims[i];  // Update the index for the next dimension
+        }
+        return coords;
+    }
+
+    int coords_to_index(std::vector<int> coords, const std::vector<int>& dims) {
+        int idx = 0;
+        int multiplier = 1;
+        for (int i = 0; i < dims.size(); i++) {
+            idx += coords[i] * multiplier;
+            multiplier *= dims[i];
+        }
+        return idx;
+    }
 
   protected:
     EventFunctionWrapper tickEvent;
@@ -125,6 +146,7 @@ class GarnetSyntheticTraffic : public ClockedObject
     int singleSender;
     int singleDest;
 
+    std::string dims;
     std::string trafficType; // string
     TrafficType traffic; // enum from string
     double injRate;

@@ -56,6 +56,8 @@ class flit
 
     virtual ~flit(){};
 
+    bool is_ring = false;
+    bool is_ring_checkpoint = false;
     int get_outport() {return m_outport; }
     int get_size() { return m_size; }
     Tick get_enqueue_time() { return m_enqueue_time; }
@@ -66,6 +68,8 @@ class flit
     int get_vnet() { return m_vnet; }
     int get_vc() { return m_vc; }
     RouteInfo get_route() { return m_route; }
+    RouteInfo get_temp_route() {return temp_route; }
+    bool get_is_candidate_allowed_goal() { return is_candidate_allowed_goal; }
     MsgPtr& get_msg_ptr() { return m_msg_ptr; }
     flit_type get_type() { return m_type; }
     std::pair<flit_stage, Tick> get_stage() { return m_stage; }
@@ -75,9 +79,16 @@ class flit
     void set_time(Tick time) { m_time = time; }
     void set_vc(int vc) { m_vc = vc; }
     void set_route(RouteInfo route) { m_route = route; }
+    void set_temp_route(RouteInfo route) { temp_route = route; }
+    void set_is_candidate_allowed_goal(bool flag) { is_candidate_allowed_goal = flag; }
     void set_src_delay(Tick delay) { src_delay = delay; }
     void set_dequeue_time(Tick time) { m_dequeue_time = time; }
     void set_enqueue_time(Tick time) { m_enqueue_time = time; }
+    void set_is_torus(bool is_torus) { m_route.is_torus = is_torus; }
+    void init_is_torus_dims_checkpoint(int num) { m_route.is_torus_dims_checkpoint.resize(num, false); }
+    void set_is_torus_dims_checkpoint(int dim, bool is_torus_dims_checkpoint) { m_route.is_torus_dims_checkpoint[dim] = is_torus_dims_checkpoint; }
+    bool is_is_torus_dims_checkpoint_emtpy() { return m_route.is_torus_dims_checkpoint.empty(); }
+
 
     void increment_hops() { m_route.hops_traversed++; }
     virtual void print(std::ostream& out) const;
@@ -121,6 +132,8 @@ class flit
     int m_vnet;
     int m_vc;
     RouteInfo m_route;
+    RouteInfo temp_route;
+    bool is_candidate_allowed_goal = false;
     int m_size;
     Tick m_enqueue_time, m_dequeue_time;
     Tick m_time;

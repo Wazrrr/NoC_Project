@@ -45,6 +45,7 @@ class GarnetSyntheticTraffic(ClockedObject):
         "Max number of packets to send. \
                         Default is to keep sending till simulation ends",
     )
+    dims = Param.String("4,4,4", "Dimensions of the mesh")
     single_sender = Param.Int(
         -1,
         "Send only from this node. \

@@ -311,6 +311,12 @@ Router::functionalWrite(Packet *pkt)
     return num_functional_writes;
 }
 
+RouteInfo
+Router::create_routeinfo(RouteInfo original_routeinfo, int new_outport)
+{
+    return routingUnit.create_routeinfo(original_routeinfo, new_outport);
+}
+
 } // namespace garnet
 } // namespace ruby
 } // namespace gem5

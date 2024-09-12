@@ -74,7 +74,7 @@ class GarnetNetwork : public Network
     // for 2D topology
     int getNumRows() const { return m_num_rows; }
     int getNumCols() { return m_num_cols; }
-
+    std::string getTorusDims() { return torus_dims; }
     // for network
     uint32_t getNiFlitSize() const { return m_ni_flit_size; }
     uint32_t getBuffersPerDataVC() { return m_buffers_per_data_vc; }
@@ -161,6 +161,7 @@ class GarnetNetwork : public Network
     // Configuration
     int m_num_rows;
     int m_num_cols;
+    std::string torus_dims;
     uint32_t m_ni_flit_size;
     uint32_t m_max_vcs_per_vnet;
     uint32_t m_buffers_per_ctrl_vc;

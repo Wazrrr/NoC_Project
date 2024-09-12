@@ -81,6 +81,7 @@ GarnetSyntheticTraffic::GarnetSyntheticTraffic(const Params &p)
       size(p.memory_size),
       blockSizeBits(p.block_offset),
       numDestinations(p.num_dest),
+      dims(p.dims),
       simCycles(p.sim_cycles),
       numPacketsMax(p.num_packets_max),
       numPacketsSent(0),
@@ -192,6 +193,19 @@ GarnetSyntheticTraffic::generatePkt()
     int src_x = id%radix;
     int src_y = id/radix;
 
+    std::vector<int> dimensions;
+    std::stringstream ss(dims);
+    std::string token;
+
+    while (std::getline(ss, token, ',')) {
+        int dim = std::stoi(token);
+        assert(dim > 0);
+        dimensions.push_back(dim);
+    }
+
+    std::vector<int> coords = index_to_coords(id,dimensions);
+    std::vector<int> dest_coords = coords;
+
     if (singleDest >= 0)
     {
         destination = singleDest;
@@ -236,6 +250,18 @@ GarnetSyntheticTraffic::generatePkt()
         dest_x = (src_x + (int) ceil(radix/2) - 1) % radix;
         dest_y = src_y;
         destination = dest_y*radix + dest_x;
+    } else if (traffic == TORUS_TRANSPOSE_) {
+        // if (dims == "4,4,4") std::cout<<"YESSSSSSSSSSSSS"<<std::endl;
+        // else std::cout<<"NOOOOOOO"<<std::endl;
+        for (int i = 0; i < dimensions.size(); i++) {
+                dest_coords[i] = coords[(i + 1) % dimensions.size()];
+            }
+            destination = coords_to_index(dest_coords, dimensions);
+    } else if (traffic == TORUS_TORNADO_) {
+        for (int i = 0; i < dimensions.size() - 1; i++) {
+                dest_coords[i] = (coords[i] + dimensions[i] - 1) % dimensions[i];
+            }
+            destination = coords_to_index(dest_coords, dimensions);
     }
     else {
         fatal("Unknown Traffic Type: %s!\n", traffic);
@@ -334,6 +360,8 @@ GarnetSyntheticTraffic::initTrafficType()
     trafficStringToEnum["tornado"] = TORNADO_;
     trafficStringToEnum["transpose"] = TRANSPOSE_;
     trafficStringToEnum["uniform_random"] = UNIFORM_RANDOM_;
+    trafficStringToEnum["torus_transpose"] = TORUS_TRANSPOSE_;
+    trafficStringToEnum["torus_tornado"] = TORUS_TORNADO_;
 }
 
 void

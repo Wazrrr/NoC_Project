@@ -74,14 +74,24 @@ class RoutingUnit
                          PortDirection inport_dirn);
 
     // Custom Routing Algorithm using Port Directions
-    int outportComputeCustom(RouteInfo route,
+    int outportComputeRing(RouteInfo route,
                              int inport,
                              PortDirection inport_dirn);
 
+    int outportComputeTorus(RouteInfo route,
+                             int inport,
+                             PortDirection inport_dirn);
+    int outportComputeTorus_Shortest_Path(RouteInfo route,
+                             int inport,
+                             PortDirection inport_dirn);
+    int outportComputeMINAD(RouteInfo route,
+                             int inport,
+                             PortDirection inport_dirn);
     // Returns true if vnet is present in the vector
     // of vnets or if the vector supports all vnets.
+    RouteInfo create_routeinfo(RouteInfo original_routeinfo, int new_outport);
+    std::vector<int> index_to_coords(int index, const std::vector<int>& dims);
     bool supportsVnet(int vnet, std::vector<int> sVnets);
-
 
   private:
     Router *m_router;

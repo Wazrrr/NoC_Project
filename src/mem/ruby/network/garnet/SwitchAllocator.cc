@@ -120,14 +120,38 @@ SwitchAllocator::arbitrate_inports()
 
             if (input_unit->need_stage(invc, SA_, curTick())) {
                 // This flit is in SA stage
+                flit *t_flit = input_unit->peekTopFlit(invc);
+                RoutingAlgorithm routing_algorithm =
+                (RoutingAlgorithm) m_router->get_net_ptr()->getRoutingAlgorithm();
+
 
                 int outport = input_unit->get_outport(invc);
                 int outvc = input_unit->get_outvc(invc);
-
+                RouteInfo route = t_flit->get_route();
+                t_flit->set_is_candidate_allowed_goal(false);
                 // check if the flit in this InputVC is allowed to be sent
                 // send_allowed conditions described in that function.
+
+                if (routing_algorithm == Goal_) {
+                    if (outvc != -1) {
+                        RouteInfo route_it_should_be = m_router->create_routeinfo(route, outport);
+                        route = route_it_should_be;
+                        t_flit->set_temp_route(route_it_should_be);
+                    }
+                    else {
+                        t_flit->set_is_candidate_allowed_goal(true);
+                        int candidate_outport = m_router->route_compute(route,
+                        inport, input_unit->get_direction());
+                        RouteInfo candidate_route = m_router->create_routeinfo(route, candidate_outport);
+                        t_flit->set_temp_route(candidate_route);
+                        outport = candidate_outport;
+                        route = candidate_route;
+                        input_unit->grant_outport(invc, outport);
+                    }
+                }
+                // std::cout<<"outvc: "<<outvc<<std::endl;
                 bool make_request =
-                    send_allowed(inport, invc, outport, outvc);
+                    send_allowed(inport, invc, outport, outvc, t_flit->is_ring, t_flit->is_ring_checkpoint, route.is_torus, route.is_torus_dims_checkpoint, route.is_minimal_torus, routing_algorithm);
 
                 if (make_request) {
                     m_input_arbiter_activity++;
@@ -178,15 +202,22 @@ SwitchAllocator::arbitrate_outports()
 
                 // grant this outport to this inport
                 int invc = m_vc_winners[inport];
-
+                flit *t_flit = input_unit->getTopFlit(invc);
+                RoutingAlgorithm routing_algorithm =
+                (RoutingAlgorithm) m_router->get_net_ptr()->getRoutingAlgorithm();
+                if (routing_algorithm == Goal_) {
+                    t_flit->set_route(t_flit->get_temp_route());
+                }
                 int outvc = input_unit->get_outvc(invc);
                 if (outvc == -1) {
                     // VC Allocation - select any free VC from outport
-                    outvc = vc_allocate(outport, inport, invc);
+                    bool is_ring = t_flit->is_ring;
+                    bool is_ring_checkpoint = t_flit->is_ring_checkpoint;
+                    outvc = vc_allocate(outport, inport, invc, is_ring, is_ring_checkpoint, t_flit->get_route().is_torus, t_flit->get_route().is_torus_dims_checkpoint, t_flit->get_route().is_minimal_torus, routing_algorithm);
                 }
 
                 // remove flit from Input VC
-                flit *t_flit = input_unit->getTopFlit(invc);
+
 
                 DPRINTF(RubyNetwork, "SwitchAllocator at Router %d "
                                      "granted outvc %d at outport %d "
@@ -281,7 +312,7 @@ SwitchAllocator::arbitrate_outports()
  */
 
 bool
-SwitchAllocator::send_allowed(int inport, int invc, int outport, int outvc)
+SwitchAllocator::send_allowed(int inport, int invc, int outport, int outvc, bool is_ring, bool is_ring_checkpoint, bool is_torus, std::vector<bool> is_torus_dims_checkpoint, bool is_minimal_torus, RoutingAlgorithm routing_algorithm)
 {
     // Check if outvc needed
     // Check if credit needed (for multi-flit packet)
@@ -297,7 +328,7 @@ SwitchAllocator::send_allowed(int inport, int invc, int outport, int outvc)
         // needs outvc
         // this is only true for HEAD and HEAD_TAIL flits.
 
-        if (output_unit->has_free_vc(vnet)) {
+        if (output_unit->has_free_vc(vnet, is_ring, is_ring_checkpoint, is_torus, is_torus_dims_checkpoint, is_minimal_torus, routing_algorithm)) {
 
             has_outvc = true;
 
@@ -339,15 +370,16 @@ SwitchAllocator::send_allowed(int inport, int invc, int outport, int outvc)
 
 // Assign a free VC to the winner of the output port.
 int
-SwitchAllocator::vc_allocate(int outport, int inport, int invc)
+SwitchAllocator::vc_allocate(int outport, int inport, int invc, bool is_ring, bool is_ring_checkpoint, bool is_torus, std::vector<bool> is_torus_dims_checkpoint, bool is_minimal_torus, RoutingAlgorithm routing_algorihtm)
 {
     // Select a free VC from the output port
     int outvc =
-        m_router->getOutputUnit(outport)->select_free_vc(get_vnet(invc));
+        m_router->getOutputUnit(outport)->select_free_vc(get_vnet(invc), is_ring, is_ring_checkpoint, is_torus, is_torus_dims_checkpoint, is_minimal_torus, routing_algorihtm);
 
     // has to get a valid VC since it checked before performing SA
     assert(outvc != -1);
     m_router->getInputUnit(inport)->grant_outvc(invc, outvc);
+    // std::cout<<"vc_allocate outvc: "<<outvc<<std::endl;
     return outvc;
 }
 

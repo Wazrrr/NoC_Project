@@ -65,6 +65,7 @@ GarnetNetwork::GarnetNetwork(const Params &p)
     : Network(p)
 {
     m_num_rows = p.num_rows;
+    torus_dims = p.dims;
     m_ni_flit_size = p.ni_flit_size;
     m_max_vcs_per_vnet = 0;
     m_buffers_per_data_vc = p.buffers_per_data_vc;
@@ -392,6 +393,7 @@ GarnetNetwork::regStats()
         .name(name() + ".packets_received")
         .flags(statistics::pdf | statistics::total | statistics::nozero |
             statistics::oneline)
+        .unit(statistics::units::Count::get())
         ;
 
     m_packets_injected
@@ -399,7 +401,7 @@ GarnetNetwork::regStats()
         .name(name() + ".packets_injected")
         .flags(statistics::pdf | statistics::total | statistics::nozero |
             statistics::oneline)
-        ;
+        .unit(statistics::units::Count::get());
 
     m_packet_network_latency
         .init(m_virtual_networks)
@@ -433,17 +435,20 @@ GarnetNetwork::regStats()
         m_packet_queueing_latency / m_packets_received;
 
     m_avg_packet_network_latency
-        .name(name() + ".average_packet_network_latency");
+        .name(name() + ".average_packet_network_latency")
+        .unit(statistics::units::Rate<statistics::units::Tick,statistics::units::Count>::get());
     m_avg_packet_network_latency =
         sum(m_packet_network_latency) / sum(m_packets_received);
 
     m_avg_packet_queueing_latency
-        .name(name() + ".average_packet_queueing_latency");
+        .name(name() + ".average_packet_queueing_latency")
+        .unit(statistics::units::Rate<statistics::units::Tick,statistics::units::Count>::get());
     m_avg_packet_queueing_latency
         = sum(m_packet_queueing_latency) / sum(m_packets_received);
 
     m_avg_packet_latency
-        .name(name() + ".average_packet_latency");
+        .name(name() + ".average_packet_latency")
+        .unit(statistics::units::Rate<statistics::units::Tick,statistics::units::Count>::get());
     m_avg_packet_latency
         = m_avg_packet_network_latency + m_avg_packet_queueing_latency;
 
@@ -509,7 +514,7 @@ GarnetNetwork::regStats()
 
 
     // Hops
-    m_avg_hops.name(name() + ".average_hops");
+    m_avg_hops.name(name() + ".average_hops").unit(statistics::units::Ratio::get());
     m_avg_hops = m_total_hops / sum(m_flits_received);
 
     // Links
