@@ -1,4 +1,4 @@
-# This is the gem5 simulator.
+# Gem5 simulator
 
 The main website can be found at http://www.gem5.org
 
@@ -44,6 +44,7 @@ Enjoy using gem5 and please share your modifications and extensions.
 
 # Experiments
 After building gem5, you can run the experiments by running the following command in the experiment directory.
+
 #### Creating all data we needed:
 - run `./Create_all_data.sh`
 
